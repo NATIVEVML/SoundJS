@@ -1,6 +1,8 @@
 ﻿package com.createjs.soundjs {
 
+	import com.anttikupila.media.filters.LowpassFilter;
 	import flash.display.Sprite;
+	import flash.events.SecurityErrorEvent;
 	import flash.external.ExternalInterface;
 	import flash.events.Event;
 	import flash.media.Sound;
@@ -11,7 +13,8 @@
 	import flash.utils.Dictionary;
 	import flash.utils.Timer;
 	import flash.events.TimerEvent;
-
+	import com.anttikupila.media.filters.IFilter;
+	
 	public class FlashAudioPlugin extends Sprite {
 
 	// Constants:
@@ -42,7 +45,8 @@
 		protected var playbackTimer:Timer = new Timer(50);
 		public var masterVolume:Number = 1;
 		public var soundDurationHash:Object;
-
+		
+		
 	// UI Elements:
 	// ** AUTO-UI ELEMENTS **
 	// ** END AUTO-UI ELEMENTS **
@@ -91,7 +95,10 @@
 
                 setMasterVolume: handleSetMasterVolume,
 
-				command: handleCommand
+				command: handleCommand,
+
+				addFilter: handleAddFilter,
+				removeFilter: handleRemoveFilter
 			};
 
 			if (!ExternalInterface.available) {
@@ -407,9 +414,29 @@
 
 		override public function toString():String { return "[FlashAudioPlugin]"; }
 
+		// CUSTOM
+		protected function handleAddFilter(id:String, filterId:String, ...args):Boolean {
+			var wrapper:SoundWrapper = getWrapper(id);
+			var filter:IFilter;
+			switch (filterId) {
+				case 'lowpass':
+					filter = new LowpassFilter
+			}
+			wrapper.filters = new 
+		}
+
+		protected function handleRemoveFilter(id:String, filterId:String):Boolean {
+			var wrapper:SoundWrapper = getWrapper(id);
+			if (wrapper == null) { return false; }
+			log("SetVolume", wrapper.id, value);
+			wrapper.volume = value;
+			return true;
+		}
+
 	}
 
 }
+
 
 import flash.media.Sound;
 import flash.media.SoundChannel;
@@ -424,6 +451,9 @@ import flash.events.ErrorEvent;
 
 import com.createjs.soundjs.FlashAudioPlugin;
 import flash.events.SecurityErrorEvent;
+
+import com.anttikupila.media.SoundFX;
+import com.anttikupila.events.StreamingEvent;
 
 /**
  * The SoundWrapper controls a single sound instance. Instances can be played, and then modified during playback.
@@ -452,7 +482,7 @@ class SoundWrapper extends EventDispatcher {
 	/** If the sound failed. */
 	public var failed:Boolean = false;
 
-	protected var sound:Sound;
+	protected var sound:SoundFX;
 	protected var channel:SoundChannel;  // NOTE you can have a maximum of 32 sound channels at once
 	protected var timer:Timer;
 	protected var _volume:Number = 1;
@@ -476,7 +506,7 @@ class SoundWrapper extends EventDispatcher {
 		this._duration = duration;
 		this.owner = owner;
 
-		sound = new Sound();
+		sound = new SoundFX();
 		sound.addEventListener(IOErrorEvent.IO_ERROR, handleSoundError, false, 0, true);
 		sound.addEventListener(SecurityErrorEvent.SECURITY_ERROR, handleSoundError, false, 0, true);
 		sound.addEventListener(Event.COMPLETE, handleSoundLoaded, false, 0, true);
@@ -658,4 +688,14 @@ class SoundWrapper extends EventDispatcher {
 		dispatchEvent(new Event("playbackFailed"));
 	}
 
+	public function get filters( ) : Array {
+		return sound.filters;
+	}
+	
+	/**
+	 * @private
+	 */
+	public function set filters( filters : Array ) : void {
+		sound.filters = filters;
+	}
 }
